@@ -8,15 +8,27 @@
     
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    
+    <NoWarn>$(NoWarn);CS2008;NU5128</NoWarn>
+
     <PackageId>WebAPI.Controllers.Auth.Starter</PackageId>
     <Version>1.0.0</Version>
-    <Authors>YourName</Authors>
+    <Authors>Alex Monteil</Authors>
+    <Company>UMN</Company>
     <Description>Production-grade .NET 10 Web API starter boilerplate featuring built-in PostgreSQL 18 Alpine connection configurations, Serilog logs, and timing-attack hardened JWT authentication workflows.</Description>
-    <RepositoryUrl>https://github.com/YourUsername/webapi-controllers-auth-starter</RepositoryUrl>
-  </PropertyGroup>
+    
+    <RepositoryUrl>https://github.com/alexmonteil/webapi-controllers-auth-starter</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/alexmonteil/webapi-controllers-auth-starter</PackageProjectUrl>
+    <PackageReleaseNotes>Initial 1.0.0 release of the hardened, timing-attack resistant .NET 10 Web API Controllers authentication template framework.</PackageReleaseNotes>
+
+    <PackageTags>dotnet dotnet-new template webapi csharp jwt authentication postgresql security rbac boilerplate api token-refresh</PackageTags>
+    
+    <Copyright>Copyright © 2026 Alex Monteil</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression> <PackageReadmeFile>README.md</PackageReadmeFile> </PropertyGroup>
 
   <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="LICENSE" Pack="true" PackagePath="\" />
+
     <Content Include="content\**\*" Exclude="content\**\bin\**\*;content\**\obj\**\*;content\**\.git\**\*" />
   </ItemGroup>
 </Project>
