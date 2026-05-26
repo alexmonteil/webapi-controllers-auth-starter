@@ -1,0 +1,17 @@
+services:
+  database:
+    image: postgres:18-alpine
+    container_name: ${DB_NAME}_container
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ${APP_NAME}_postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  telemetry_postgres_data:
+    driver: local
