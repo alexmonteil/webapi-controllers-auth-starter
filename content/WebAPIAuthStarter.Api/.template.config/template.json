@@ -1,6 +1,6 @@
 {
   "$schema": "http://json.schemastore.org/template",
-  "author": "Alex Monteil",
+  "author": "Your Name",
   "classifications": [ "Web", "WebAPI", "Auth" ],
   "name": ".NET 10 Web API Controllers Auth Starter",
   "identity": "WebAPI.Controllers.Auth.Starter",
@@ -10,5 +10,17 @@
     "type": "project"
   },
   "sourceName": "WebAPIAuthStarter.Api", 
-  "preferNameDirectory": true
+  "preferNameDirectory": true,
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "include": [ ".env.example" ],
+          "rename": {
+            ".env.example": ".env"
+          }
+        }
+      ]
+    }
+  ]
 }
