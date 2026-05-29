@@ -18,14 +18,18 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _config;
     private readonly DefaultDbContext _context;
     private readonly IMailService _mailService;
+    private readonly ILogger<AuthController> _logger;
 
+    // TODO: If you change the password hashing algorithm or BCrypt work factor, you MUST update this dummy hash.
+    // It exists to ensure strict computational timing consistency against side-channel attacks for non-existent users.
     private const string DummyPasswordHash = "$2a$11$K8V81/bWv23VpM8.AhnXHeWdfZ9Ie56K.yB77XNq8KshW9pXB.Gqy";
 
-    public AuthController(IConfiguration config, DefaultDbContext context, IMailService mailService)
+    public AuthController(IConfiguration config, DefaultDbContext context, IMailService mailService, ILogger<AuthController> logger)
     {
         _config = config;
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _mailService = mailService;
+        _logger = logger;
     }
 
     [HttpPost("register")]
@@ -40,6 +44,7 @@ public class AuthController : ControllerBase
         var userExists = await _context.Users.AnyAsync(u => u.Email == normalizedEmail || u.Username == normalizedUsername);
         if (userExists)
         {
+            _logger.LogWarning("Registration failed: Username '{Username}' or Email is already in use.", normalizedUsername);
             return Conflict(new OperationStatusResponse(false, "Username or Email is already in use."));
         }
 
@@ -58,6 +63,7 @@ public class AuthController : ControllerBase
         {
             PasswordHash = passwordHash,
             VerifyToken = emailVerificationToken,
+            // TODO: Customize activation token expiration limit as needed.
             VerifyTokenExpiration = DateTime.UtcNow.AddHours(2)
         };
 
@@ -67,6 +73,15 @@ public class AuthController : ControllerBase
         await _context.SaveChangesAsync();
 
         var mailSent = await _mailService.SendVerificationEmailAsync(newUser.Email, newUser.Username, emailVerificationToken);
+
+        if (mailSent)
+        {
+            _logger.LogInformation("User {UserId} '{Username}' successfully registered. Verification email sent.", newUser.Id, newUser.Username);
+        }
+        else
+        {
+            _logger.LogWarning("User {UserId} '{Username}' successfully registered, but the verification email failed to send.", newUser.Id, newUser.Username);
+        }
 
         return CreatedAtAction(
             nameof(Register),
@@ -93,6 +108,7 @@ public class AuthController : ControllerBase
         var normalizedEmail = req.Email.Trim().ToLower();
         const string invalidCredentialsMsg = "Invalid credentials provided.";
 
+        // TODO: Adjust progressive lockout rules per your operational requirements.
         const int MaxFailedAttempts = 5;
         const int LockoutMinutes = 15;
 
@@ -108,6 +124,8 @@ public class AuthController : ControllerBase
                 credential.LastLoginAttempt.Value.AddMinutes(LockoutMinutes) > DateTime.UtcNow)
             {
                 var remainingTime = credential.LastLoginAttempt.Value.AddMinutes(LockoutMinutes) - DateTime.UtcNow;
+
+                _logger.LogWarning("Login failed: Account '{Email}' is temporarily locked due to excessive failed attempts.", normalizedEmail);
 
                 return BadRequest(new OperationStatusResponse(
                     false,
@@ -132,11 +150,14 @@ public class AuthController : ControllerBase
                 await _context.SaveChangesAsync();
             }
 
+            _logger.LogWarning("Login failed for '{Email}': Invalid credentials.", normalizedEmail);
+
             return Unauthorized(new OperationStatusResponse(false, invalidCredentialsMsg));
         }
 
         if (!user.IsEmailVerified)
         {
+            _logger.LogWarning("Login failed: User {UserId} '{Username}' attempted to log in but their email is unverified.", user.Id, user.Username);
             return BadRequest(new OperationStatusResponse(false, "Account is unverified. Please check your inbox for the activation link."));
         }
 
@@ -144,6 +165,8 @@ public class AuthController : ControllerBase
         await _context.SaveChangesAsync();
 
         var token = GenerateJwtToken(user);
+
+        _logger.LogInformation("User {UserId} '{Username}' successfully logged in.", user.Id, user.Username);
 
         return Ok(new AuthResponse
         {
@@ -169,22 +192,27 @@ public class AuthController : ControllerBase
 
         if (credential == null || credential.User == null || credential.User.Email != normalizedEmail)
         {
+            _logger.LogWarning("Verification failed: Invalid token or email mismatch for '{Email}'.", normalizedEmail);
             return BadRequest(new OperationStatusResponse(false, "The verification token or email address provided is invalid."));
         }
 
         if (credential.User.IsEmailVerified)
         {
+            _logger.LogInformation("Verification attempt for user {UserId}: Account is already verified.", credential.User.Id);
             return Ok(new OperationStatusResponse(true, "Your email address has already been verified! You can proceed to log in."));
         }
 
         if (credential.VerifyTokenExpiration.HasValue && DateTime.UtcNow > credential.VerifyTokenExpiration.Value)
         {
+            _logger.LogWarning("Verification failed for user {UserId}: Token has expired.", credential.User.Id);
             return BadRequest(new OperationStatusResponse(false, "This verification token has expired. Please request a new activation link."));
         }
 
         credential.User.IsEmailVerified = true;
         credential.VerifyToken = null;
         credential.VerifyTokenExpiration = null;
+
+        _logger.LogInformation("User {UserId} successfully verified their email address.", credential.User.Id);
 
         await _context.SaveChangesAsync();
 
@@ -204,6 +232,7 @@ public class AuthController : ControllerBase
 
         if (user == null || user.UserCredential == null || user.IsEmailVerified)
         {
+            _logger.LogInformation("Resend verification requested for '{Email}', but account was not found or is already verified.", normalizedEmail);
             return Ok(new OperationStatusResponse(true, "If an unverified account with that email address exists, a new verification link has been sent."));
         }
 
@@ -215,8 +244,11 @@ public class AuthController : ControllerBase
         var mailSent = await _mailService.SendVerificationEmailAsync(user.Email, user.Username, emailVerificationToken);
         if (!mailSent)
         {
+            _logger.LogError("Failed to send the resend verification email to user {UserId}.", user.Id);
             return StatusCode(500, new OperationStatusResponse(false, "Failed to send the verification email. Please try again later."));
         }
+
+        _logger.LogInformation("A new verification link was successfully sent to user {UserId}.", user.Id);
 
         return Ok(new OperationStatusResponse(true, "If an unverified account with that email address exists, a new verification link has been sent."));
     }
@@ -238,6 +270,7 @@ public class AuthController : ControllerBase
             issuer: _config["JWT_ISSUER"],
             audience: _config["JWT_AUDIENCE"],
             claims: claims,
+            // TODO: Customize JWT token lifespan. For production, consider using shorter-lived access tokens along with refresh tokens.
             expires: DateTime.UtcNow.AddHours(2),
             signingCredentials: creds
         );

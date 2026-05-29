@@ -28,6 +28,10 @@ public class DefaultMailService : IMailService
         email.Subject = $"Verify your {_settings.AppName} Account";
 
         // Construct verification link
+        // TODO: CUSTOMIZE THIS URL! 
+        // This should point to your FRONTEND application's verification page. 
+        // The frontend will then parse the token from the URL and make a secure HTTP POST request 
+        // to the /api/auth/verify endpoint as mandated by the idempotency design.
         var verificationUrl = $"https://localhost:7001/api/auth/verify-email?token={token}";
 
         var bodyBuilder = new BodyBuilder
