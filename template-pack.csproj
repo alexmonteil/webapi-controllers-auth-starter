@@ -11,14 +11,14 @@
     <NoWarn>$(NoWarn);CS2008;NU5128</NoWarn>
 
     <PackageId>WebAPI.Controllers.Auth.Starter</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Alex Monteil</Authors>
     <Company>UMN</Company>
     <Description>Production-grade .NET 10 Web API starter boilerplate featuring built-in PostgreSQL 18 Alpine connection configurations, Serilog logs, and timing-attack hardened JWT authentication workflows.</Description>
     
     <RepositoryUrl>https://github.com/alexmonteil/webapi-controllers-auth-starter</RepositoryUrl>
     <PackageProjectUrl>https://github.com/alexmonteil/webapi-controllers-auth-starter</PackageProjectUrl>
-    <PackageReleaseNotes>Initial 1.0.0 release of the hardened, timing-attack resistant .NET 10 Web API Controllers authentication template framework.</PackageReleaseNotes>
+    <PackageReleaseNotes>Initial 1.1.0 release of the hardened, timing-attack resistant .NET 10 Web API Controllers authentication template framework.</PackageReleaseNotes>
 
     <PackageTags>dotnet dotnet-new template webapi csharp jwt authentication postgresql security rbac boilerplate api token-refresh</PackageTags>
     

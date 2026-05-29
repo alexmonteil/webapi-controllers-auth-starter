@@ -28,14 +28,15 @@ try
     // Bind mail environment vars to MailSettings class
     builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
 
-    // Register MailService;
+    // Register MailService
     builder.Services.AddTransient<IMailService, DefaultMailService>();
 
     // Read environment variables for JWT auth
+    // TODO: Ensure JWT_SECRET_KEY is at least 32 characters long in your local .env or production environment.
     var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
         ?? throw new InvalidOperationException("Critical Failure: JWT_SECRET_KEY environment variable is not set.");
-    var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "TelemetryDefaultIssuer";
-    var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "TelemetryDefaultAudience";
+    var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? $"{appName}DefaultIssuer";
+    var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? $"{appName}DefaultAudience";
 
     // Register JWT Authentication
     builder.Services.AddAuthentication(options =>
@@ -59,6 +60,7 @@ try
     });
 
     // Build DB Connection String
+    // TODO: Modify these variables to inject your production database credentials or switch to a full connection string.
     var dbHost = "localhost";
     var dbPort = "5432";
     var dbName = Environment.GetEnvironmentVariable("DB_NAME") ?? "enterprisedb";
@@ -71,10 +73,17 @@ try
     builder.Services.AddControllers();
     builder.Services.AddOpenApi();
 
+    // Register the custom Global Exception Handler
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
+
     var app = builder.Build();
 
-    // TWEAK 1: Clean up internal HTTP logging noise (Place BEFORE controller mapping)
+    // Clean up internal HTTP logging noise
     app.UseSerilogRequestLogging();
+
+    // Maps the IExceptionHandler middleware into the pipeline
+    app.UseExceptionHandler();
 
     if (app.Environment.IsDevelopment())
     {
@@ -94,6 +103,6 @@ catch (Exception ex)
 }
 finally
 {
-    // TWEAK 2: Forces Serilog to dump remaining memory streams to disk before app dies
+    // Forces Serilog to dump remaining memory streams to disk before app dies
     Log.CloseAndFlush();
 }
